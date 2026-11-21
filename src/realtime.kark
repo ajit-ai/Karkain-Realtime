@@ -1,0 +1,106 @@
+// Karkain-Realtime - live communication ch primitives.
+// Karkain Language v1.2.0 verified baseline (tag v1.2.0,
+// commit 77d70693e1e3134dac312a303bffafa7d50fa988).
+//
+// Scope boundary: this framework models bounded message channels and
+// subscriber lists in portable Karkain. It does not open network sockets
+// or start background threads.
+//
+// Channel representation: [name, capacity, message, message, ...].
+// Arrays are values; mutating functions return the updated ch.
+
+// new_channel creates a bounded ch.
+public func new_channel(name, capacity) {
+    let c = []
+    c = push(c, name)
+    c = push(c, capacity)
+    return c
+}
+
+// channel_name returns the ch name.
+public func channel_name(ch) {
+    return ch[0]
+}
+
+// channel_capacity returns the configured capacity.
+public func channel_capacity(ch) {
+    return ch[1]
+}
+
+// message_count returns the number of queued messages.
+public func message_count(ch) {
+    return len(ch) - 2
+}
+
+// is_full reports whether the ch reached its capacity.
+public func is_full(ch) {
+    return message_count(ch) >= channel_capacity(ch)
+}
+
+// publish appends a message when capacity allows; otherwise the ch
+// is returned unchanged so callers can detect rejection by comparing
+// message_count before and after.
+public func publish(ch, message) {
+    if is_full(ch) {
+        return ch
+    }
+    return push(ch, message)
+}
+
+// peek returns the oldest message without removing it.
+public func peek(ch) {
+    if message_count(ch) == 0 {
+        return ""
+    }
+    return ch[2]
+}
+
+// latest returns the newest message without removing it.
+public func latest(ch) {
+    let n = message_count(ch)
+    if n == 0 {
+        return ""
+    }
+    return ch[2 + n - 1]
+}
+
+// drop removes the oldest message and returns the updated ch.
+public func drop(ch) {
+    if message_count(ch) == 0 {
+        return ch
+    }
+    let out = []
+    out = push(out, ch[0])
+    out = push(out, ch[1])
+    let i = 3
+    while (i < len(ch)) {
+        out = push(out, ch[i])
+        i = i + 1
+    }
+    return out
+}
+
+// clear removes all queued messages but keeps name and capacity.
+public func clear(ch) {
+    return new_channel(ch[0], ch[1])
+}
+
+// new_subscribers returns an empty subscriber list.
+public func new_subscribers() {
+    return []
+}
+
+// subscribe appends a subscriber name.
+public func subscribe(subscribers, name) {
+    return push(subscribers, name)
+}
+
+// subscriber_count returns the number of subscribers.
+public func subscriber_count(subscribers) {
+    return len(subscribers)
+}
+
+// channel_summary builds a one-line ch diagnostic.
+public func channel_summary(ch) {
+    return channel_name(ch) + ": " + str(message_count(ch)) + "/" + str(channel_capacity(ch)) + " messages"
+}

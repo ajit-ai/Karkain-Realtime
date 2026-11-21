@@ -1,0 +1,13 @@
+// Karkain-Realtime runnable example: a bounded event ch.
+import realtime
+
+func main() {
+    let c = new_channel("feed", 3)
+    c = publish(c, "connected")
+    c = publish(c, "update:42")
+    println(channel_summary(c))
+    println("oldest=" + peek(c))
+    println("latest=" + latest(c))
+    c = drop(c)
+    println(channel_summary(c))
+}

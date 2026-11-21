@@ -1,0 +1,7 @@
+name = "karkain-realtime"
+version = "0.1.0-dev"
+description = "Bounded realtime channel and subscriber primitives for Karkain"
+license = "MIT"
+targets = ["native"]
+
+[dependencies]

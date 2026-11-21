@@ -1,0 +1,68 @@
+// Native tests for Karkain-Realtime.
+
+func test_new_channel() {
+    let c = new_channel("events", 4)
+    assert_eq(channel_name(c), "events")
+    assert_eq(channel_capacity(c), 4)
+    assert_eq(message_count(c), 0)
+}
+
+func test_publish() {
+    let c = publish(new_channel("events", 3), "a")
+    assert_eq(message_count(c), 1)
+    assert_eq(peek(c), "a")
+    assert_eq(latest(c), "a")
+}
+
+func test_publish_order() {
+    let c = publish(publish(new_channel("e", 3), "a"), "b")
+    assert_eq(message_count(c), 2)
+    assert_eq(peek(c), "a")
+    assert_eq(latest(c), "b")
+}
+
+func test_capacity_rejection() {
+    let c = publish(publish(new_channel("e", 2), "a"), "b")
+    assert(is_full(c))
+    let full = publish(c, "c")
+    assert_eq(message_count(full), 2)
+    assert_eq(latest(full), "b")
+}
+
+func test_peek_empty() {
+    let c = new_channel("e", 2)
+    assert_eq(peek(c), "")
+    assert_eq(latest(c), "")
+}
+
+func test_drop() {
+    let c = publish(publish(new_channel("e", 3), "a"), "b")
+    let d = drop(c)
+    assert_eq(message_count(d), 1)
+    assert_eq(peek(d), "b")
+    assert_eq(message_count(c), 2)
+}
+
+func test_drop_empty() {
+    let c = new_channel("e", 2)
+    assert_eq(message_count(drop(c)), 0)
+}
+
+func test_clear() {
+    let c = clear(publish(new_channel("e", 3), "a"))
+    assert_eq(message_count(c), 0)
+    assert_eq(channel_name(c), "e")
+    assert_eq(channel_capacity(c), 3)
+}
+
+func test_subscribers() {
+    let s = subscribe(subscribe(new_subscribers(), "ui"), "api")
+    assert_eq(subscriber_count(s), 2)
+    assert_eq(s[0], "ui")
+    assert_eq(s[1], "api")
+}
+
+func test_channel_summary() {
+    let c = publish(new_channel("events", 2), "a")
+    assert_eq(channel_summary(c), "events: 1/2 messages")
+}

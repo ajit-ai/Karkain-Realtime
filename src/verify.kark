@@ -1,0 +1,18 @@
+// Integration verification for the Karkain-Realtime public API.
+import realtime
+
+func main() {
+    let c = new_channel("feed", 2)
+    c = publish(c, "tick-1")
+    c = publish(c, "tick-2")
+    assert_eq(message_count(c), 2)
+    assert(is_full(c))
+    println(channel_summary(c))
+
+    let d = drop(c)
+    assert_eq(peek(d), "tick-2")
+    assert_eq(message_count(d), 1)
+
+    let subs = subscribe(new_subscribers(), "dashboard")
+    assert_eq(subscriber_count(subs), 1)
+}
