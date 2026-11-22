@@ -1,0 +1,16 @@
+// Karkain-Realtime Phase 2 example: in-process pub/sub delivery.
+import realtime
+
+func main() {
+    let subs = add_subscription(add_subscription(new_subscriptions(), "feed", "ui"), "feed", "api")
+    let event = new_event("update", "price=42")
+    let log = deliver_event(subs, [], "feed", event_payload(event))
+
+    println("deliveries=" + str(len(log)))
+    println("first=" + log[0])
+    println("filtered=" + str(filter_message("price=42", "price")))
+
+    let presence = mark_present(new_presence(), "ui")
+    println("present=" + str(is_present(presence, "ui")))
+    println("reconnect=" + str(should_reconnect(new_reconnect_policy(3), 2)))
+}

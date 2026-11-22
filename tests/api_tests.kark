@@ -66,3 +66,77 @@ func test_channel_summary() {
     let c = publish(new_channel("events", 2), "a")
     assert_eq(channel_summary(c), "events: 1/2 messages")
 }
+
+// --- Phase 2 regression ---
+
+func test_phase1_regression() {
+    let c = publish(publish(new_channel("e", 2), "a"), "b")
+    assert_eq(message_count(c), 2)
+    assert(is_full(c))
+    assert_eq(peek(c), "a")
+    assert_eq(message_count(drop(c)), 1)
+}
+
+// --- Phase 2 additions ---
+
+func test_event_model() {
+    let e = new_event("created", "payload")
+    assert_eq(event_name(e), "created")
+    assert_eq(event_payload(e), "payload")
+    assert_eq(e[2], "event")
+}
+
+func test_subscriptions() {
+    let s = add_subscription(add_subscription(new_subscriptions(), "feed", "ui"), "feed", "api")
+    assert_eq(channel_subscriber_count(s, "feed"), 2)
+    let names = subscribers_for(s, "feed")
+    assert_eq(names[0], "ui")
+    assert_eq(names[1], "api")
+}
+
+func test_unsubscribe() {
+    let s = add_subscription(add_subscription(new_subscriptions(), "feed", "ui"), "feed", "api")
+    let r = unsubscribe(s, "feed", "ui")
+    assert_eq(channel_subscriber_count(r, "feed"), 1)
+    assert_eq(subscribers_for(r, "feed")[0], "api")
+    assert_eq(channel_subscriber_count(s, "feed"), 2)
+}
+
+func test_multi_subscriber_delivery() {
+    let s = add_subscription(add_subscription(new_subscriptions(), "feed", "ui"), "feed", "api")
+    let log = deliver_event(s, [], "feed", "tick")
+    assert_eq(len(log), 2)
+    assert_eq(log[0], "feed>ui>tick")
+    assert_eq(log[1], "feed>api>tick")
+    let empty = deliver_event(new_subscriptions(), [], "feed", "tick")
+    assert_eq(len(empty), 0)
+}
+
+func test_message_filtering() {
+    assert(filter_message("hello world", "world"))
+    assert(filter_message("hello", ""))
+    assert(filter_message("hello", "xyz") == false)
+}
+
+func test_channel_groups() {
+    let g = add_to_group(add_to_group(new_groups(), "live", "feed"), "live", "alerts")
+    let c = channels_in_group(g, "live")
+    assert_eq(len(c), 2)
+    assert_eq(c[0], "feed")
+    assert_eq(len(channels_in_group(g, "other")), 0)
+}
+
+func test_presence() {
+    let p = mark_absent(mark_present(new_presence(), "ui"), "api")
+    assert(is_present(p, "ui"))
+    assert(is_present(p, "api") == false)
+    let off = mark_absent(p, "ui")
+    assert(is_present(off, "ui") == false)
+}
+
+func test_reconnect_policy() {
+    let p = new_reconnect_policy(3)
+    assert(should_reconnect(p, 0))
+    assert(should_reconnect(p, 2))
+    assert(should_reconnect(p, 3) == false)
+}

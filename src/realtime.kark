@@ -104,3 +104,181 @@ public func subscriber_count(subscribers) {
 public func channel_summary(ch) {
     return channel_name(ch) + ": " + str(message_count(ch)) + "/" + str(channel_capacity(ch)) + " messages"
 }
+
+// ---------------------------------------------------------------------------
+// Phase 2 additions. Phase 1 bounded-chan and subscriber APIs are kept.
+// Delivery is in-process only; network transports are BLOCKED by the
+// absence of socket builtins in the verified v1.2.0 subset.
+
+// new_event creates an event triple [name, payload, "event"].
+public func new_event(name, payload) {
+    let e = []
+    e = push(e, name)
+    e = push(e, payload)
+    e = push(e, "event")
+    return e
+}
+
+// event_name returns an event name.
+public func event_name(event) { return event[0] }
+
+// event_payload returns an event payload.
+public func event_payload(event) { return event[1] }
+
+// new_subscriptions creates an empty subscription table.
+public func new_subscriptions() {
+    return []
+}
+
+// subscribe adds a subscriber to a chan.
+public func add_subscription(sub, chan, subscriber) {
+    let out = sub
+    out = push(out, chan)
+    out = push(out, subscriber)
+    return out
+}
+
+// unsubscribe removes one subscriber from a chan.
+public func unsubscribe(sub, chan, subscriber) {
+    let out = []
+    let i = 0
+    while (i < len(sub)) {
+        if sub[i] == chan {
+            if sub[i + 1] == subscriber {
+                i = i + 2
+            } else {
+                out = push(out, sub[i])
+                out = push(out, sub[i + 1])
+                i = i + 2
+            }
+        } else {
+            out = push(out, sub[i])
+            out = push(out, sub[i + 1])
+            i = i + 2
+        }
+    }
+    return out
+}
+
+// subscribers_for returns the subscribers of a chan.
+public func subscribers_for(sub, chan) {
+    let out = []
+    let i = 0
+    while (i < len(sub)) {
+        if sub[i] == chan { out = push(out, sub[i + 1]) }
+        i = i + 2
+    }
+    return out
+}
+
+// channel_subscriber_count counts subscribers of a chan.
+public func channel_subscriber_count(sub, chan) {
+    return len(subscribers_for(sub, chan))
+}
+
+// deliver_event appends one delivery record per subscriber to a log.
+public func deliver_event(sub, log, chan, message) {
+    let out = log
+    let names = subscribers_for(sub, chan)
+    let i = 0
+    while (i < len(names)) {
+        out = push(out, chan + ">" + names[i] + ">" + message)
+        i = i + 1
+    }
+    return out
+}
+
+// filter_message reports whether a message matches a filter substring.
+public func filter_message(message, filter) {
+    if len(filter) == 0 { return true }
+    return contains(message, filter)
+}
+
+// new_groups creates a chan group store.
+public func new_groups() {
+    return []
+}
+
+// add_to_group adds a chan to a group.
+public func add_to_group(groups, group, chan) {
+    let out = groups
+    out = push(out, group)
+    out = push(out, chan)
+    return out
+}
+
+// channels_in_group returns the channels belonging to a group.
+public func channels_in_group(groups, group) {
+    let out = []
+    let i = 0
+    while (i < len(groups)) {
+        if groups[i] == group { out = push(out, groups[i + 1]) }
+        i = i + 2
+    }
+    return out
+}
+
+// new_presence creates a presence store.
+public func new_presence() {
+    return []
+}
+
+// mark_present marks a subscriber as present.
+public func mark_present(presence, subscriber) {
+    let out = []
+    out = push(out, subscriber)
+    out = push(out, "present")
+    let i = 0
+    while (i < len(presence)) {
+        if presence[i] == subscriber {
+            i = i + 2
+        } else {
+            out = push(out, presence[i])
+            out = push(out, presence[i + 1])
+            i = i + 2
+        }
+    }
+    return out
+}
+
+// mark_absent marks a subscriber as absent.
+public func mark_absent(presence, subscriber) {
+    let out = []
+    out = push(out, subscriber)
+    out = push(out, "absent")
+    let i = 0
+    while (i < len(presence)) {
+        if presence[i] == subscriber {
+            i = i + 2
+        } else {
+            out = push(out, presence[i])
+            out = push(out, presence[i + 1])
+            i = i + 2
+        }
+    }
+    return out
+}
+
+// is_present reports whether a subscriber is present.
+public func is_present(presence, subscriber) {
+    let i = 0
+    while (i < len(presence)) {
+        if presence[i] == subscriber {
+            if presence[i + 1] == "present" { return true }
+        }
+        i = i + 2
+    }
+    return false
+}
+
+// new_reconnect_policy creates a bounded reconnection policy.
+public func new_reconnect_policy(max_attempts) {
+    let out = []
+    out = push(out, max_attempts)
+    return out
+}
+
+// should_reconnect reports whether another attempt is allowed.
+public func should_reconnect(policy, attempts) {
+    return attempts < policy[0]
+}
